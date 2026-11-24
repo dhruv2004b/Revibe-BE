@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// The app reads and writes everything through the ReVibe API (Admin SDK,
+// which bypasses these rules). Clients get read-only access to their own
+// profile for live updates, and nothing else. Coins can never be written
+// by a client.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+
+      match /{sub=**} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

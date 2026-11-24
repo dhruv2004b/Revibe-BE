@@ -1,0 +1,31 @@
+# Backup keep-alive for the Render free tier. The server already pings itself;
+# this wakes it from outside too, e.g. after a restart.
+#
+# Setup: GitHub repo > Settings > Secrets and variables > Actions > Variables >
+# New repository variable RENDER_HEALTH_URL = https://<your-service>.onrender.com/health
+#
+# Note: GitHub may delay scheduled runs, and disables them after 60 days with
+# no commits to the repo; re-enable from the Actions tab if that happens.
+name: keep-alive
+
+on:
+  schedule:
+    # Every 30 min: ~1,490 runs/month, inside the 2,000 free Actions minutes
+    # even for a private repo (each run bills as at least 1 minute).
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.RENDER_HEALTH_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          URL: ${{ vars.RENDER_HEALTH_URL }}
+        run: |
+          # Up to 90 s: a sleeping free instance can take ~60 s to wake.
+          curl --fail --silent --show-error --max-time 90 --retry 2 --retry-delay 5 "$URL"

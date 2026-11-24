@@ -1,0 +1,55 @@
+# Render Blueprint for the ReVibe API (free tier).
+# Render: New > Blueprint > pick this repo.
+# Free web services sleep after 15 minutes without traffic. The server pings
+# its own public /health (RENDER_EXTERNAL_URL, set by Render) every 10 minutes
+# so it stays awake; .github/workflows/keep-alive.yml is an outside backup.
+services:
+  - type: web
+    name: revibe-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Free instances have 512 MB; keep the heap well under it.
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=384
+
+      # --- Demo mode, until Firebase is set up ---------------------------
+      # Mock sign-in (dev:<uid>) and in-memory data. Data is wiped whenever the
+      # free instance sleeps or redeploys. Not for real users.
+      # To go live: set AUTH_MODE=firebase, STORE_MODE=firestore,
+      # ALLOW_DEMO_MODE=false and fill FIREBASE_CREDENTIALS in the dashboard.
+      - key: ALLOW_DEMO_MODE
+        value: "true"
+      - key: AUTH_MODE
+        value: mock
+      - key: STORE_MODE
+        value: memory
+
+      - key: KEEP_ALIVE
+        value: "true"
+      - key: KEEP_ALIVE_INTERVAL_MIN
+        value: "10"
+      - key: APP_TIME_ZONE
+        value: Asia/Kolkata
+      - key: DAILY_COIN_CAP
+        value: "60"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: HF_SENTIMENT_MODEL
+        value: cardiffnlp/twitter-roberta-base-sentiment-latest
+      - key: HF_TIMEOUT_MS
+        value: "8000"
+      # Secrets: set these in the Render dashboard, never in this file.
+      - key: HF_TOKEN
+        sync: false
+      - key: FIREBASE_CREDENTIALS
+        sync: false
